@@ -2,6 +2,13 @@ package code.swing;
 import code.apiStuff.Exchange;
 import code.swing.buttons.ConvertButton;
 import code.swing.buttons.DocumentationButton;
+import code.swing.buttons.MongoButton;
+import com.mongodb.MongoClient;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -10,26 +17,36 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
+
 public class SwingUI extends JFrame{
     private DocumentationButton documentationButton;
-    private String apiKey = "";
+    private MongoClient mongoClient;
+    private MongoDatabase db;
+    private TrayIcon trayIcon;
+    private String apiKey = "https://api.currencyapi.com/v3/latest?apikey=";
     private ConvertButton convertButton;
     private ArrayList<String> namesList;
     private JTextField textField1;
     private JTextField textField2;
     private JTextField textField3;
+    private MongoButton mongoButton;
     public SwingUI() {
         super("CurrencyXchange");
         setLayout(null);
         setArrayList();
         initialize();
         makeTitle();
+        mongoClient = new MongoClient("localhost", 27017);
+        db = mongoClient.getDatabase("history");
+        connectToMongo();
         makeLabel("Enter the type of currency to convert from:", 50, 100, 245, 50);
         makeLabel("Enter the amount of currency to convert:", 50, 175, 245, 50);
         makeLabel("Enter the type of currency to convert to:", 350, 100, 245, 50);
         textField1 = new JTextField("Type of currency");
-        documentationButton = new DocumentationButton(this, 300,  400, 200, 50,Color.WHITE, Color.BLACK);
+        documentationButton = new DocumentationButton(this, 225,  400, 200, 50,Color.WHITE, Color.BLACK);
         convertButton = new ConvertButton(this, 50, 400, 150, 50, Color.WHITE, Color.BLACK);
+        mongoButton = new MongoButton(this, 450, 400, 150, 50, Color.WHITE, Color.BLACK);
         setTextField(50, 150, 150, 30, textField1);
         textField2 = new JTextField("Amount");
         setTextField(50, 225, 150, 30, textField2);
@@ -66,12 +83,46 @@ public class SwingUI extends JFrame{
                     clearFields();
                     return;
                 }
-                Exchange.convertCurrency(apiKey,textField1.getText(), textField3.getText(), textField2.getText());
+                double convertedCurrency = Exchange.convertCurrency(apiKey,textField1.getText(), textField3.getText(), textField2.getText());
+                addToMongo(convertedCurrency);
                 clearFields();
+            }
+        });
+        mongoButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FindIterable<Document> iterable = db.getCollection("history").find();
+                MongoCursor<Document> cursor = iterable.iterator();
+                String[][] data = new String[(int)db.getCollection("history").countDocuments()][5];
+                int i = 0;
+                while(cursor.hasNext()){
+                    Document document = cursor.next();
+                    data[i][0] = document.get("date-of-transaction").toString();
+                    data[i][1] = document.get("type-of-currency-from").toString();
+                    data[i][2] = document.get("amount-of-currency-from").toString();
+                    data[i][3] = document.get("type-of-currency-to").toString();
+                    data[i][4] = document.get("amount-of-currency-to").toString();
+                    i++;
+                }
+                TableFrame tableFrame = new TableFrame(data);
             }
         });
         revalidate();
         repaint();
+    }
+    private void connectToMongo(){
+        if(db.getCollection("history") != null){
+            db.getCollection("history").drop();
+        }
+        db.createCollection("history");
+    }
+    private void addToMongo(double convertedCurrency){
+        Document document = new Document("date-of-transaction",new Date())
+                .append("type-of-currency-from", textField1.getText())
+                .append("type-of-currency-to", textField3.getText())
+                .append("amount-of-currency-from", Double.parseDouble(textField2.getText()))
+                .append("amount-of-currency-to", convertedCurrency);
+        db.getCollection("history").insertOne(document);
     }
     private void setArrayList(){
         namesList = new ArrayList<>();

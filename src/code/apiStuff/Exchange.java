@@ -8,7 +8,7 @@ import org.json.JSONObject;
 
 import javax.swing.*;
 
-public class Exchange {
+public abstract class Exchange {
     private static String getExchange(String apiKey) throws IOException{
         URL url = new URL(apiKey);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -30,15 +30,17 @@ public class Exchange {
         Double ronRate = dataObject.getJSONObject(key).getDouble("value");
         return ronRate;
     }
-    public static void convertCurrency(String apiKey,String enteredTypeFrom, String enteredTypeTo, String enteredAmount) {
+    public static double convertCurrency(String apiKey,String enteredTypeFrom, String enteredTypeTo, String enteredAmount) {
         try {
             String jsonString = Exchange.getExchange(apiKey);
             double dollarRate = Exchange.getRonRateFromJsonString(jsonString, enteredTypeFrom);
             double valInDollars = Double.parseDouble(enteredAmount) / dollarRate;
             double convertedAmount = valInDollars * Exchange.getRonRateFromJsonString(jsonString, enteredTypeTo);
             JOptionPane.showMessageDialog(null, "The amount in " + enteredTypeTo + " is: " + convertedAmount);
+            return convertedAmount;
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "An error occurred while trying to convert the currency");
         }
+        return -1;
     }
 }
