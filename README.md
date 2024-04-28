@@ -22,7 +22,7 @@ CurrencyXchange is a user-friendly Java application that facilitates real-time c
 - Clone the repository
 - Install the jar files
 - Open MongoDB Compass App
-- Go to SwiftUI class and enter your api key which you can get for free from this website : https://app.currencyapi.com
+- Go to SwingUI class and enter your api key which you can get for free from this website : https://app.currencyapi.com
 - Enjoy the app
 
 # License
